@@ -1,6 +1,7 @@
 # NI Data Acquisition Library for Matlab
-version 1.0.5
+Version 1.0.5
 
+# Quick Start
 To start data acquisition run the script NIDAQ.m. 
 
 To view data use VIEWLOGS.m. 
