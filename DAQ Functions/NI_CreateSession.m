@@ -23,7 +23,7 @@ function [session, device] = NI_CreateSession (sampleRate, defaultRecordingTime)
     if nargin < 1; sampleRate = 1000; end
 
     % stop all currently running DAQ services
-    %if (~isempty(daqfind)); stop(daqfind); end
+    daq.reset;
 
     % get the list of devices in the system   
     devices = daq.getDevices;
