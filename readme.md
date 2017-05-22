@@ -8,3 +8,6 @@ Requires DAQmx drivers for National Instruments devices: [ni.com](http://www.ni.
 To start data acquisition run the script NIDAQ.m. 
 To view data use VIEWLOGS.m.
 See comments for customisation options.
+
+# Events
+Events numbered 1-9 can be recorded by clicking the UI event buttons or pressing the number keys while acquisition is running.

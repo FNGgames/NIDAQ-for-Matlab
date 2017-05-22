@@ -32,9 +32,11 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
 %       Pass an empty string to use the default directory
 %       Pass the string 'ui' to enter the name at a prompt
 %
-%   while data is logging you will have access to a gui for stopping the
+%   While data is logging you will have access to a gui for stopping the
 %   acquisition and recording events into the data.
 %
+%   Events are also recorded when a number key is pressed (note the figure
+%   has to be in focus for the key presses to work)
 %
 
     %% HANDLE INPUT
@@ -146,7 +148,10 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     if logical(plotOption)         
         
         % create a figure
-        FF = figure('units','normalized','OuterPosition',[0.05 0.1 0.7 0.85]);
+        FF = figure(...
+            'units','normalized',...
+            'OuterPosition',[0.05 0.1 0.7 0.85],...
+            'KeyPressFcn', @onKeyPress);
         grid on
         box on
         title('Data Preview')
@@ -184,12 +189,13 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     h = 830;
     w = 200;
     pos = [scrn(3) - (w+50), scrn(4) - (h+50), w, h];
-    btn = figure ( ...
+    ui = figure ( ...
         'OuterPosition', pos, ...
         'MenuBar', 'none', ...
         'Toolbar', 'none', ...
         'Name', 'STOP BUTTON', ...
-        'NumberTitle', 'off' );        
+        'NumberTitle', 'off', ...
+        'KeyPressFcn', @onKeyPress);        
      
     % setup stop button
     uicontrol('Style', 'pushbutton', 'String', 'STOP',...
@@ -213,7 +219,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
 
     %% Start DAQ
     fprintf ('\n\tDAQ Started. Target Duration: %d', session.DurationInSeconds);  
-    fprintf ('\n\tAcquiring Data ...');
+    fprintf ('\n\tAcquiring Data ...\n\n');
     session.startBackground;    
     while session.IsRunning
         pause(1);            
@@ -256,11 +262,21 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     % callback for event triggers
     function onTriggerPressed(evtIndex)
         eventValue = evtIndex;
+        fprintf('\n\tEvent %0.0f activated', evtIndex);
         if ishandle(FF)
             figure(FF);
             plot(DAQTime,DAQValue,'ro','markerfacecolor','r')
             text(DAQTime,DAQValue,[' EVT' num2str(evtIndex)])
         end
+        figure(ui)
+    end
+
+    % callback for key presses
+    function onKeyPress(~, ~)
+       key = get(gcf, 'CurrentCharacter');
+       num = str2double(key);
+       if isempty(num) || isnan(num) || num<1 || num>9; return; end
+       onTriggerPressed(num);        
     end
 
     % function for printing error messages about input data type
