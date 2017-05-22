@@ -51,13 +51,11 @@ S = NI_CreateSession (Cfg.SampleRate, Cfg.Duration);
 %       Pass a path string for direct specification of a folder path
 %       Pass an empty string to use the default directory
 %       Pass the string 'ui' to enter the name at a prompt
-NI_Acquire (S, Cfg.Duration, Cfg.PreviewMode, Cfg.LogName, 'same', 'ui');
+NI_Acquire (S, Cfg.Duration, Cfg.PreviewMode, Cfg.LogName, 'same', Cfg.LogFolder);
 
 % Cleans up the NI DAQ session and associated objects. Run after all DAQ
 % operations are complete.
-NI_Cleanup(S);
-
-
+NI_Cleanup(S); clear;
 
 
 

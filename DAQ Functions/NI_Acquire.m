@@ -118,8 +118,12 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
             mkdir(logDirectory);
         end                 
     end
-    addpath(genpath(logDirectory));
+    addpath(genpath(logDirectory));    
     
+    % update the configuration file
+    cfg = NI_ImportConfig();
+    cfg.LogFolder = logDirectory;
+    NI_ExportConfig(cfg);    
     
     %% INITIALISE NEW LOG FILE
     % get a filename for data logging and start a new file
@@ -237,7 +241,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     delete(lh);
     if logical(plotOption); delete(ph); end
     fclose('all');
-    fprintf('\n\tDAQ Complete.\n');
+    fprintf('\n\n\tDAQ Complete.\n');
     
     %% CALLBACKS
     % callback for logging data
@@ -262,7 +266,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     % callback for event triggers
     function onTriggerPressed(evtIndex)
         eventValue = evtIndex;
-        fprintf('\n\tEvent %0.0f activated', evtIndex);
+        fprintf('\n\tEvent %0.0f.', evtIndex);
         if ishandle(FF)
             figure(FF);
             plot(DAQTime,DAQValue,'ro','markerfacecolor','r')
