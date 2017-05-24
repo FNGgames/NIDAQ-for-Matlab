@@ -32,8 +32,8 @@ function f = NI_DisplayLogs (logs, showSpectrum)
     % start the figure
     f =  figure ('units','normalized','OuterPosition',[0 0 1 1]);
     
-    if showSpectrum; subplot(2,1,1); end   
-    
+    % first pane
+    if showSpectrum; subplot(2,1,1); end     
     hold on
     box on
     xlabel('Time (s)')
@@ -46,20 +46,18 @@ function f = NI_DisplayLogs (logs, showSpectrum)
     plot(time, data);
     
     % find the user events
-    inds = find(log.events > 0);
-    
-    % find the plot axis limits from the data
-    limits = [min(time), max(time), ...
-        min(data) - 0.1*min(data), max(data) + 0.1*max(data)];    
-    yspan = limits(4) - limits(3);
+    evtInds = find(log.events > 0);    
+    yMin = min(min(data));
+    yMax = max(max(data));
+    yLabelPos = (yMax-yMin)/4;  
     
     % plot lines to mark user events
-    for k=1:length(time(inds))
-        plot([time(inds(k)), time(inds(k))], ...
-            [limits(3), limits(4)], ...
+    for k=1:length(time(evtInds))
+        plot([time(evtInds(k)), time(evtInds(k))], ...
+            [yMin, yMax], ...
             'r-', 'MarkerFaceColor', [1 0 0]); 
-        text(log.time(inds(k)), limits(3)+0.05*yspan, ...
-            [' evt ' num2str(events(inds(k)))]);
+        text(log.time(evtInds(k)), yMin+yLabelPos, ...
+            [' evt ' num2str(events(evtInds(k)))]);
     end
     
     % set axis limits and title
@@ -74,10 +72,8 @@ function f = NI_DisplayLogs (logs, showSpectrum)
         ylabel('Amplitude')
         xlabel('Frequency')
     end
-    set(findall(gcf,'type','text'),'FontSize',14)
-        
+    
+    % set all the text in the figure to size 14
+    set(findall(gcf,'type','text'),'FontSize',14)        
 
 end
-
-
-
