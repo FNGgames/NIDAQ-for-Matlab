@@ -1,4 +1,4 @@
-% clear Workspace
+% clear workspace
 clear; clc; close all
 
 % configure the session
@@ -8,7 +8,7 @@ cfg = NI_ConfigureSession;
 [session, device] = NI_CreateSession(cfg);
 
 % do data acquisition
-NI_Acquire(session);
+NI_Acquire(session, cfg);
 
 % cleanup the session once we're done
 NI_Cleanup(session);
