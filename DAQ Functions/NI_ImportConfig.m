@@ -1,45 +1,52 @@
-%% Import Settings File
-function [cfg, raw] = NI_ImportConfig()
+function cfg = NI_ImportConfig()
 
-%% Initialize variables.
-filename = [fileparts(mfilename('fullpath')) '\settings.cfg'];
-assert(logical(exist(filename, 'file')), 'Configuration file not found');
-delimiter = '\t';
-startRow = 1;
-endRow = inf;
+cfgFileName = [fileparts(mfilename('fullpath')) '\settings.cfg']; 
 
-%% Read columns of data as text
-formatSpec = '%s%s%[^\n\r]';
+if exist(cfgFileName, 'file')
+    
+    fmt = '%s%s%[^\n\r]';
+    fid = fopen(cfgFileName, 'r');
+    data = textscan(fid, fmt, 'delimiter', '\t');
+    data = data{2};
+    fclose(fid);
 
-%% Open the text file.
-fileID = fopen(filename,'r');
+    cfg = struct;
+    cfg.DeviceIndex = str2double(data{1});
+    cfg.SubsystemIndex = str2double(data{2});
+    cfg.Channels = string2mat(data{3});
+    cfg.SampleRate = str2double(data{4});
+    cfg.Duration = str2double(data{5});
+    cfg.PreviewMode = str2double(data{6});
+    cfg.LogName = data{7};
+    cfg.LogDirectory = data{8};
+    
+else
+   
+    cfg = struct;
+    cfg.DeviceIndex = 1;
+    cfg.SubsystemIndex = 1;
+    cfg.Channels = [];
+    cfg.SampleRate = 1000;
+    cfg.Duration = 60;
+    cfg.PreviewMode = 1;
+    cfg.LogName = 'Data Log';
+    cfg.LogDirectory = '';
+    
+end
 
-%% Read columns of data according to the format.
-dataArray = textscan(fileID, formatSpec, endRow(1)-startRow(1)+1, 'Delimiter', delimiter, 'HeaderLines', startRow(1)-1, 'ReturnOnError', false, 'EndOfLine', '\r\n');
-for block=2:length(startRow)
-    frewind(fileID);
-    dataArrayBlock = textscan(fileID, formatSpec, endRow(block)-startRow(block)+1, 'Delimiter', delimiter, 'HeaderLines', startRow(block)-1, 'ReturnOnError', false, 'EndOfLine', '\r\n');
-    for col=1:length(dataArray)
-        dataArray{col} = [dataArray{col};dataArrayBlock{col}];
+function mat = string2mat(str)
+
+str = strrep(str, '[', '');
+str = strrep(str, ']', '');
+mat = [];
+if ~isempty(str)
+    str = strsplit(str, ' ');
+    for i=1:length(str)
+        mat(i) = str2double(str{i}); %#ok<AGROW>
     end
 end
 
-%% Close the text file.
-fclose(fileID);
 
-%% Convert the contents of columns containing numeric text to numbers.
-% Replace non-numeric text with NaN.
-raw = repmat({''},length(dataArray{1}),length(dataArray)-1);
-for col=1:length(dataArray)-1
-    raw(1:length(dataArray{col}),col) = dataArray{col};
-end
-raw = raw(:,2)';
 
-%% Create output struct
-cfg = struct('SampleRate', str2double(raw{2}), ...
-    'Duration', str2double(raw{3}), ...
-    'PreviewMode', str2double(raw{4}), ...
-    'LogName', raw{1}, ...
-    'LogFolder', raw{5});
 
-end
+

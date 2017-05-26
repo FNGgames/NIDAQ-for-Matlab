@@ -107,7 +107,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     end    
         
     % do the same for the log directory
-    upperFolder = StripPath (mfilename ('fullpath'), 2);
+    upperFolder = NI_StripPath (mfilename ('fullpath'), 2);
     if strcmpi (logDirectory, 'ui')
         logDirectory = uigetdir (upperFolder);        
     elseif ischar (logDirectory) && exist(logDirectory, 'dir')                 

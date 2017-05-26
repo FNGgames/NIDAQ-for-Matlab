@@ -1,4 +1,4 @@
-function strippedPath = StripPath( path, level )
+function strippedPath = NI_StripPath( path, level )
 % Get upper folder from path
 %   path: original file path
 %   level: how many folders to move up

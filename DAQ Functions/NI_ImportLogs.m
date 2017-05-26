@@ -11,7 +11,7 @@ function logs = NI_ImportLogs(folder)
 % log files in the specified folder. The structs contain fields for start
 % time, dt, time axis, events and data.
 
-    path = StripPath (mfilename ('fullpath'), 2);
+    path = NI_StripPath (mfilename ('fullpath'), 2);
     
     if nargin == 0; folder = [path '\Logs']; end
     if ~logical(exist(folder, 'dir')) || strcmpi (folder, 'ui') 
