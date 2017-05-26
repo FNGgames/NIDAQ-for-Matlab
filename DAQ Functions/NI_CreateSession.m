@@ -1,6 +1,7 @@
 function [session, device] = NI_CreateSession (cfg)
 % Initialises a session interface for NI devices.
 % print message
+if nargin<1; cfg = NI_ImportConfig; end
 fprintf(1, 'DAQ Session Initialising ...\n');
 
 % stop all currently running DAQ services

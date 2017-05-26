@@ -25,7 +25,7 @@ else
     cfg = struct;
     cfg.DeviceIndex = 1;
     cfg.SubsystemIndex = 1;
-    cfg.Channels = [];
+    cfg.Channels = [1];
     cfg.SampleRate = 1000;
     cfg.Duration = 60;
     cfg.PreviewMode = 1;
