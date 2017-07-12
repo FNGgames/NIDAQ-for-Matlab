@@ -1,4 +1,4 @@
-function NI_Acquire (session, duration, plotOption, logName, logFilename, logDirectory)
+function NI_Acquire (session, duration, plotOption, logName, logFilename, logDirectory, logAsText)
 % Starts data acquisition for a given NI daq session.
 %
 % Input Params: 
@@ -32,6 +32,11 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
 %       Pass an empty string to use the default directory
 %       Pass the string 'ui' to enter the name at a prompt
 %
+%   logAsText (optional) -
+%       Bool to determine if the log file is .txt (default) or .mat. A .mat
+%       file will perform better for high-sample rate data acquisition
+%       because of fewer string operations and disk write time.
+%
 %   While data is logging you will have access to a gui for stopping the
 %   acquisition and recording events into the data.
 %
@@ -44,6 +49,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     assert (nargin > 0, 'Error: DAQ session is a required parameter');
     
     % apply log folder defaults
+    if nargin < 7; logAsText = true; end
     if nargin < 6; logDirectory = ''; end
     if nargin < 5; logFilename = ''; end
     if nargin < 4; logName = ''; end   
@@ -51,6 +57,9 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     if nargin < 2; duration = session.DurationInSeconds; end 
     
     % validate input
+    if ~islogical(logAsText)
+        logAsText = logical(logAsText);
+    end
     if ~ischar(logDirectory) 
         typeError ('logDirectory', 'string');        
         logDirectory = '';
@@ -126,23 +135,39 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     NI_ExportConfig(cfg);    
     
     %% INITIALISE NEW LOG FILE
-    % get a filename for data logging and start a new file
+    % get a filename for data logging and start a new file    
+    if logAsText; ext = '.txt'; else ext = '.mat'; end    
     logFullPath = [logDirectory '\' logFilename ' ' ...
-        datestr(now, 'YYYY-mm-DD hh-MM-ss-fff.txt')];
-    logfile = fopen (logFullPath, 'wt+');
-    eventValue = 0;
-
-    % print file header 
-    fprintf (logfile, '%s\n', logName);
-    fprintf (logfile, '%s\n', datestr(now));
-    fprintf (logfile, '%d\n\n', 1/session.Rate);   
+        datestr(now, 'YYYY-mm-DD hh-MM-ss-fff') ext];
     
-    % print column headers
-    n = length(session.Channels) + 1;
-    fprintf (logfile, 'Time\tEvt');
-    for jj=2:n;
-        fprintf (logfile, ['\tCh' num2str(jj-1)]);
-    end    
+    % init chunk variables
+    dt = 1/session.Rate;
+    nChannels = length(session.Channels);
+    chunkRows = 100000;
+    if ~logAsText; chunkRows = chunkRows*10; end;
+    chunkSize = [chunkRows, nChannels + 2];
+    chunk = NaN(chunkSize(1), chunkSize(2));
+    chunkIndex = 1; 
+    
+    % init log file
+    if logAsText
+        logfile = fopen (logFullPath, 'wt+');
+        % print file header 
+        fprintf (logfile, '%s\n', logName);
+        fprintf (logfile, '%s\n', datestr(now));
+        fprintf (logfile, '%d\n\n', dt);
+        % print column headers        
+        fprintf (logfile, 'Time\tEvt');
+        for jj=2:nChannels+1;
+            fprintf (logfile, ['\tCh' num2str(jj-1)]);
+        end  
+    else
+        % save .mat file
+        data = []; %#ok<NASGU>
+        startTime = now; %#ok<NASGU>
+        save(logFullPath, 'logName', 'startTime', 'dt', 'data', '-v7.3'); 
+        logfile = matfile(logFullPath, 'Writable', true);
+    end  
     
     %% ADD LISTENERS TO SESSION
     % add listener to session for data storage
@@ -178,7 +203,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
         end
         
         % configure colors and plot behaviour
-        lineColors = lines(n-1);
+        lineColors = lines(nChannels);
         set(gca, 'ColorOrder', lineColors, 'NextPlot', nextPlot);       
         
         % add the listener
@@ -220,6 +245,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     % store current time 
     DAQTime = 0;
     DAQValue = 0;
+    eventValue = 0; 
 
     %% Start DAQ
     fprintf ('\n\tDAQ Started. Target Duration: %d', session.DurationInSeconds);  
@@ -237,23 +263,70 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
     end   
     
     % finish acquisition 
+    LogRemainingData();
     close all
     delete(lh);
     if logical(plotOption); delete(ph); end
     fclose('all');
-    fprintf('\n\n\tDAQ Complete.\n');
+    fprintf('\tDAQ Complete.\n');
     
     %% CALLBACKS
     % callback for logging data
-    function LogData (~,evt)        
-        for r = 1:length(evt.TimeStamps)
-            fprintf (logfile, '\n%2.4f', evt.TimeStamps(r));
-            fprintf (logfile, '\t%d', eventValue);
-            fprintf (logfile, '\t%2.4f', evt.Data(r,:));
-            if eventValue ~= 0; eventValue = 0; end            
-        end   
+    function LogData (~,evt)  
+        
+        eventValues = zeros(length(evt.TimeStamps), 1) + eventValue;            
+        if eventValue ~= 0; eventValue = 0; end  
+        
+        buffer = ([evt.TimeStamps, eventValues, evt.Data]);
+        bufferSize = size(buffer, 1);
+        chunkSpace = (chunkRows - chunkIndex)+1;
+        copySize = min(bufferSize, chunkSpace);      
+        
+        chunk(chunkIndex : chunkIndex+copySize-1, :)...
+            = buffer(1:copySize, :);    
+        
+        if bufferSize > chunkSpace
+            
+            if logAsText
+                for r = 1:chunkRows
+                    fprintf (logfile, '\n%2.4f', chunk(r,1));
+                    fprintf (logfile, '\t%d', chunk(r,2));
+                    fprintf (logfile, '\t%2.4f', chunk(r,3:end));
+                end                
+            else    
+                a = size(logfile.data,1);
+                b = a + chunkRows;
+                c = size(chunk,2);
+                logfile.data(a+1:b,1:c) = chunk;
+            end            
+            leftOver = buffer(chunkSpace + 1 : end, :);
+            chunk = single(NaN(size(chunk))); 
+            chunk(1:size(leftOver,1),:) = leftOver;
+            chunkIndex = size(leftOver,1)+1;   
+            
+        else               
+            chunkIndex = chunkIndex + copySize + 1;               
+        end
+        
         DAQTime = evt.TimeStamps(end);
         DAQValue = evt.Data(end);
+    end
+
+    function LogRemainingData()
+        index = find(isnan(chunk(:,1)), 1)-1;
+        chunk = chunk(1:index,:);
+        if logAsText
+            for r = 1:size(chunk,1)
+                fprintf (logfile, '\n%2.4f', chunk(r,1));
+                fprintf (logfile, '\t%d', chunk(r,2));
+                fprintf (logfile, '\t%2.4f', chunk(r,3:end));
+            end                
+        else    
+            a = size(logfile.data,1);
+            b = a + size(chunk,1);
+            c = size(chunk,2);
+            logfile.data(a+1:b,1:c) = chunk;
+        end 
     end
     
     % callback for previewing data
