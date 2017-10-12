@@ -30,7 +30,7 @@ function filteredSignal = BandPassFilter( signal, time, lowCutoff, highCutoff)
 
     % calculate sample rate from time channel
     % (assumes constant sample rate)
-    fs = 1/mean(diff(time));   
+    fs = 1/nanmean(diff(time));   
     
     % get the size of the vector and transpose if needed
     nRows = size(signal,1); 

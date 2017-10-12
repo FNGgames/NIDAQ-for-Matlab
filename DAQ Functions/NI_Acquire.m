@@ -158,7 +158,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
         fprintf (logfile, '%d\n\n', dt);
         % print column headers        
         fprintf (logfile, 'Time\tEvt');
-        for jj=2:nChannels+1;
+        for jj=2:nChannels+1
             fprintf (logfile, ['\tCh' num2str(jj-1)]);
         end  
     else
@@ -188,7 +188,7 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
         ylabel('Voltage') 
         
         % only use pre-sized chart if isContinous is false
-        if session.IsContinuous && plotOption > 2; 
+        if session.IsContinuous && plotOption > 2
             plotOption = 2; 
         end
         
@@ -317,9 +317,9 @@ function NI_Acquire (session, duration, plotOption, logName, logFilename, logDir
         chunk = chunk(1:index,:);
         if logAsText
             for r = 1:size(chunk,1)
-                fprintf (logfile, '\n%2.4f', chunk(r,1));
+                fprintf (logfile, '\n%f', chunk(r,1));
                 fprintf (logfile, '\t%d', chunk(r,2));
-                fprintf (logfile, '\t%2.4f', chunk(r,3:end));
+                fprintf (logfile, '\t%f', chunk(r,3:end));
             end                
         else    
             a = size(logfile.data,1);
